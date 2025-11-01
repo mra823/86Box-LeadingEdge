@@ -1,0 +1,40 @@
+# Build directories
+build/
+cmake-build-*/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ROM files (except documentation)
+*.bin
+*.BIN
+*.rom
+*.ROM
+!roms/**/README.md
+!roms/**/ROM_ANALYSIS.md
+
+# Compiled objects
+*.o
+*.obj
+*.a
+*.lib
+
+# Executables
+86Box
+86Box.exe
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
