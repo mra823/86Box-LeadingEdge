@@ -40,6 +40,7 @@
 #include <86box/fdc_ext.h>
 #include <86box/gameport.h>
 #include <86box/keyboard.h>
+#include <86box/video.h>
 #include <86box/machine.h>
 
 /*
@@ -75,12 +76,6 @@ machine_xt_leading_edge_d_init(const machine_t *model)
     /* Return early if BIOS-only mode or load failed */
     if (bios_only || !ret)
         return ret;
-
-    /*
-     * Add XT keyboard controller
-     * The Leading Edge Model D uses a standard XT-style keyboard interface
-     */
-    device_add(&kbc_xt_device);
 
     /*
      * Initialize common hardware components
@@ -128,6 +123,27 @@ machine_xt_leading_edge_d_init(const machine_t *model)
         device_add(&fdc_xt_device);
 
     /*
+     * Add integrated video controller if configured as internal
+     *
+     * The Leading Edge Model D has integrated CGA-compatible video
+     * with both MDA (monochrome) and CGA (color) modes, plus a
+     * proprietary 640×200×16 color mode. For now we use the standard
+     * CGA device which provides full compatibility with CGA software.
+     */
+    if (gfxcard[0] == VID_INTERNAL)
+        device_add(&cga_device);
+
+    /*
+     * Add XT keyboard controller
+     *
+     * The Leading Edge Model D uses a standard XT-style keyboard interface.
+     * IMPORTANT: On XT compatibles, the keyboard controller must be added
+     * AFTER the video card because they share the same PPI (8255) for
+     * configuration switches that indicate the display type to the BIOS.
+     */
+    device_add(&kbc_xt_device);
+
+    /*
      * Initialize NMI (Non-Maskable Interrupt) handler
      *
      * The NMI handler manages parity errors and other critical
@@ -142,19 +158,6 @@ machine_xt_leading_edge_d_init(const machine_t *model)
      * at the standard I/O address (0x200-0x20F).
      */
     standalone_gameport_type = &gameport_device;
-
-    /*
-     * Note: Leading Edge Model D has integrated CGA-compatible video
-     *
-     * The system includes integrated video that provides both MDA
-     * (monochrome) and CGA (color) compatibility modes, plus a
-     * proprietary 640×200×16 color mode. The standard CGA device
-     * should be selected by the user in the video configuration.
-     *
-     * For full accuracy, a custom video device could be implemented
-     * to support the proprietary mode, but standard CGA compatibility
-     * is sufficient for most software.
-     */
 
     /*
      * Note: Leading Edge Model D has RTC at non-standard port 0x300
