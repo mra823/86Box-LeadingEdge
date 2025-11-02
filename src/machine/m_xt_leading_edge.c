@@ -41,6 +41,8 @@
 #include <86box/gameport.h>
 #include <86box/keyboard.h>
 #include <86box/video.h>
+#include <86box/leading_edge_rtc.h>
+#include <86box/vid_leading_edge.h>
 #include <86box/machine.h>
 
 /*
@@ -92,24 +94,17 @@ machine_xt_leading_edge_d_init(const machine_t *model)
     /*
      * Configure XT-specific timing
      *  
-     * Set PIT channel 1 to use the XT-style refresh timer
+     * Set PIT channel 1 to use the XT-style refresh timer which
+     * generates DRAM refresh requests via DMA channel 0.
      */
     pit_devs[0].set_out_func(pit_devs[0].data, 1, pit_refresh_timer_xt);
-
-    /* Initialize NMI (Non-Maskable Interrupt) */
-    nmi_init();
-
-    /* Set standard gameport device */
-    standalone_gameport_type = &gameport_200_device;
 
     /*
-     * Configure PIT for XT-style DRAM refresh timing
-     *
-     * The Leading Edge Model D uses standard XT DRAM refresh timing.
-     * Channel 1 of the PIT generates the DRAM refresh signal, which
-     * triggers DMA channel 0 to refresh system memory.
+     * Initialize NMI (Non-Maskable Interrupt) handler and configure
+     * game port for optional joystick support.
      */
-    pit_devs[0].set_out_func(pit_devs[0].data, 1, pit_refresh_timer_xt);
+    nmi_init();
+    standalone_gameport_type = &gameport_device;
 
     /*
      * Add integrated floppy disk controller if configured as internal
@@ -127,11 +122,11 @@ machine_xt_leading_edge_d_init(const machine_t *model)
      *
      * The Leading Edge Model D has integrated CGA-compatible video
      * with both MDA (monochrome) and CGA (color) modes, plus a
-     * proprietary 640×200×16 color mode. For now we use the standard
-     * CGA device which provides full compatibility with CGA software.
+     * proprietary 640×200×16 color mode. We use a custom device
+     * that extends the standard CGA with the proprietary mode.
      */
     if (gfxcard[0] == VID_INTERNAL)
-        device_add(&cga_device);
+        device_add(&leading_edge_video_device);
 
     /*
      * Add XT keyboard controller
@@ -144,36 +139,18 @@ machine_xt_leading_edge_d_init(const machine_t *model)
     device_add(&kbc_xt_device);
 
     /*
-     * Initialize NMI (Non-Maskable Interrupt) handler
+     * Add integrated Real-Time Clock (RTC)
      *
-     * The NMI handler manages parity errors and other critical
-     * hardware conditions that require immediate attention.
+     * The Leading Edge Model D has a battery-backed RTC at the non-standard
+     * I/O port 0x300-0x31F (IBM AT uses 0x70-0x7F). This uses a National
+     * Semiconductor MM58167 chip. DOS software requires CLOCK.SYS or 
+     * CLKDVR.SYS driver to access the RTC.
+     *
+     * IMPORTANT: This port conflicts with XT-IDE's default address (0x300).
+     * Users must configure XT-IDE to use an alternate address if both are
+     * needed, which is historically accurate behavior.
      */
-    nmi_init();
-
-    /*
-     * Configure game port for optional joystick support
-     *
-     * The Leading Edge Model D supports an optional game port
-     * at the standard I/O address (0x200-0x20F).
-     */
-    standalone_gameport_type = &gameport_device;
-
-    /*
-     * Note: Leading Edge Model D has RTC at non-standard port 0x300
-     *
-     * The system includes a battery-backed Real-Time Clock at I/O port
-     * 0x300-0x31F, which is non-standard (IBM AT uses 0x70-0x7F).
-     * This RTC requires a DOS driver (CLOCK.SYS or CLKDVR.SYS) to function.
-     *
-     * Important: This address conflicts with the default XT-IDE address.
-     * Users should configure XT-IDE to use an alternate address if both
-     * are needed.
-     *
-     * A custom RTC device implementation could be added in the future
-     * for full hardware accuracy, but it is not essential for basic
-     * operation since DOS will use the BIOS time functions.
-     */
+    device_add(&leading_edge_rtc_device);
 
     return ret;
 }

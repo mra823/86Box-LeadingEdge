@@ -39,6 +39,7 @@ add_library(dev OBJECT
     isartc.c
     isapnp.c
     kbc_at.c
+    leading_edge_rtc.c
     kbc_at_dev.c
     kbc_xt.c
     keyboard.c
